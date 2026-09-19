@@ -1,53 +1,122 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local Window = Rayfield:CreateWindow({
-   Name = "🪦 Reign Fall: Husks Tracker",
-   LoadingTitle = "Solara Interface Suite",
-   LoadingSubtitle = "Kovrovka Apocalypse Mode V8",
-   ConfigurationSaving = { Enabled = false },
-   Discord = { Enabled = false },
-   KeySystem = false
-})
-
--- Membuat Tab Menu dengan Desain Clean Gelap Neon
-local MainTab = Window:CreateTab("Live Husks Logs", nil)
+-- ========================================================================
+-- SOLARA REIGN FALL OFFLINE HUB (RAYFIELD DARK NEON STYLE)
+-- ========================================================================
 
 local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+
+-- Bersihkan UI lama jika ada
+if CoreGui:FindFirstChild("ReignFallHuskHub") then
+    CoreGui.ReignFallHuskHub:Destroy()
+end
+
+-- 1. MEMBUAT WINDOW HUB VISUAL (Desain Rayfield Lokal)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ReignFallHuskHub"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
+
+local mainHub = Instance.new("Frame")
+mainHub.Size = UDim2.new(0, 390, 0, 310)
+mainHub.Position = UDim2.new(0.05, 0, 0.2, 0)
+mainHub.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+mainHub.BackgroundTransparency = 0.05
+mainHub.Active = true
+mainHub.Draggable = true
+mainHub.Parent = screenGui
+
+local hubCorner = Instance.new("UICorner")
+hubCorner.CornerRadius = UDim.new(0, 8)
+hubCorner.Parent = mainHub
+
+local hubStroke = Instance.new("UIStroke")
+hubStroke.Color = Color3.fromRGB(0, 255, 150)
+hubStroke.Thickness = 1.5
+hubStroke.Transparency = 0.4
+hubStroke.Parent = mainHub
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 35)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "  🪦 REIGN FALL: HUSKS TRACKER"
+titleLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+titleLabel.TextSize = 13
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainHub
+
+local line = Instance.new("Frame")
+line.Size = UDim2.new(1, -20, 0, 1)
+line.Position = UDim2.new(0, 10, 0, 35)
+line.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+line.BorderSizePixel = 0
+line.Parent = mainHub
+
+local container = Instance.new("ScrollingFrame")
+container.Name = "LogContainer"
+container.Size = UDim2.new(1, -20, 1, -50)
+container.Position = UDim2.new(0, 10, 0, 42)
+container.BackgroundTransparency = 1
+container.BorderSizePixel = 0
+container.ScrollBarThickness = 2
+container.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
+container.CanvasSize = UDim2.new(0, 0, 0, 0)
+container.Parent = mainHub
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.Padding = UDim.new(0, 5)
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiListLayout.Parent = container
+
+uiListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    container.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y + 10)
+end)
+
 local trackedNPCs = {}
-local uiLabels = {}
+local EnemiesFolder = workspace:FindFirstChild("Enemies")
 
--- Folder khusus penampung musuh yang di-generate engine Reign Fall
-local EnemiesFolder = workspace:WaitForChild("Enemies", 5)
-
--- 2. REIGN FALL DEATH DETECTION (Mendeteksi penghapusan organ vital/despawn)
+-- 2. FUNGSI CEK HUSK MATI
 local function isHuskDead(model)
     if not model or not model:IsDescendantOf(workspace) then return true end
-    
-    -- Game Reign Fall langsung menghapus HRP atau mengubah nama model saat unit mati/ragdoll
     local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
     if not hrp then return true end
-    
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid.Health <= 0 then return true end
-    
     return false
 end
 
--- 3. CORE SINKRONISASI COORD LOGS (0.1s REFRESH)
+-- 3. CORE SINKRONISASI JARAK HUSK (0.1s REFRESH)
 local function trackHusk(model)
     if trackedNPCs[model] then return end
     trackedNPCs[model] = true
-    
-    local elementId = tostring(math.random(100000, 999999))
-    
-    -- Membuat satu baris log teks menggunakan komponen resmi Rayfield
-    -- Catatan: HP ditampilkan "ACTIVE" karena status angka di Reign Fall terenkripsi penuh di server
-    uiLabels[elementId] = MainTab:CreateLabel(
-        string.format("💀 %s  |  ❤️ HP: ACTIVE  |  📍 Jarak: Menyinkronkan...", model.Name)
-    )
-    
-    -- LOOP SINKRONISASI (REFRESH DATA SECARA RESPONSIF PER 0.1 DETIK)
+
+    local logFrame = Instance.new("Frame")
+    logFrame.Size = UDim2.new(1, 0, 0, 30)
+    logFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    logFrame.Parent = container
+
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 5)
+    rowCorner.Parent = logFrame
+
+    local rowStroke = Instance.new("UIStroke")
+    rowStroke.Color = Color3.fromRGB(0, 255, 150)
+    rowStroke.Thickness = 1
+    rowStroke.Transparency = 0.6
+    rowStroke.Parent = logFrame
+
+    local logText = Instance.new("TextLabel")
+    logText.Size = UDim2.new(1, -10, 1, 0)
+    logText.Position = UDim2.new(0, 10, 0, 0)
+    logText.BackgroundTransparency = 1
+    logText.TextColor3 = Color3.fromRGB(230, 230, 230)
+    logText.TextSize = 11
+    logText.Font = Enum.Font.GothamBold
+    logText.TextXAlignment = Enum.TextXAlignment.Left
+    logText.Text = string.format("💀 %s | ❤️ ALIVE | 📍 Jarak: Calculating...", model.Name)
+    logText.Parent = logFrame
+
     task.spawn(function()
         while model and model:IsDescendantOf(workspace) and trackedNPCs[model] do
             if isHuskDead(model) then break end
@@ -58,34 +127,19 @@ local function trackHusk(model)
             
             if myHrp and hrp then
                 local distance = math.floor((myHrp.Position - hrp.Position).Magnitude)
-                
-                -- Update teks menggunakan method :Update() resmi bawaan Rayfield
-                if uiLabels[elementId] and uiLabels[elementId].Update then
-                    uiLabels[elementId]:Update(
-                        string.format("💀 %s  |  ❤️ Status: ALIVE  |  📍 Jarak: %d studs", model.Name, distance)
-                    )
-                end
+                logText.Text = string.format("💀 %s  |  ❤️ Status: ALIVE  |  📍 Jarak: %d studs", model.Name, distance)
             end
-            task.wait(0.1) -- Dipersingkat ke 0.1s agar pergerakan jarak saat kamu berlari sangat mulus
+            task.wait(0.1)
         end
         
-        -- MENGHAPUS HUSK SECARA INSTAN BEGITU MATI / DESPAWN
-        if uiLabels[elementId] then
-            pcall(function()
-                uiLabels[elementId]:Destroy()
-            end)
-            uiLabels[elementId] = nil
-        end
+        logFrame:Destroy()
         trackedNPCs[model] = nil
     end)
 end
 
--- 4. VALIDATOR KHUSUS FAKSI ENEMIES REIGN FALL
+-- 4. VALIDASI FAKSI ENEMIES
 local function validateHusk(object)
     if not object:IsA("Model") then return end
-    task.wait(0.05) -- Jeda mikro render
-    
-    -- Karena berada di dalam folder Enemies, kita pastikan objek tersebut bukan Player yang tidak sengaja bug masuk folder
     if object.Name == LocalPlayer.Name then return end
     if Players:GetPlayerFromCharacter(object) then return end
     
@@ -94,15 +148,12 @@ local function validateHusk(object)
     end
 end
 
--- 5. INITIAL ENGINE BOOT UP
--- Jika folder Enemies ditemukan, langsung kunci pelacakan ke dalam folder tersebut (sangat hemat FPS)
 if EnemiesFolder then
     for _, item in ipairs(EnemiesFolder:GetChildren()) do
         validateHusk(item)
     end
     EnemiesFolder.ChildAdded:Connect(validateHusk)
 else
-    -- Fallback jika tipe map memuat di direktori flat workspace utama
     for _, desc in ipairs(workspace:GetDescendants()) do
         if desc.Parent and desc.Parent.Name == "Enemies" then
             validateHusk(desc)
@@ -110,104 +161,3 @@ else
     end
     workspace.DescendantAdded:Connect(validateHusk)
 end
-
-Rayfield:Notify({
-   Title = "Reign Fall Radar Online",
-   Content = "Target dikunci ke folder workspace.Enemies!",
-   Duration = 3
-})
-end
-
--- 2. UTILITY: SINKRONISASI HITUNGAN PERSENTASE HP REAL-TIME
-local function getLiveHealthPercent(model)
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    local customHP = model:GetAttribute("Health") or model:GetAttribute("HP")
-    local customMax = model:GetAttribute("MaxHealth") or model:GetAttribute("MaxHP")
-    
-    if customHP and customMax and customMax > 0 then
-        return math.clamp(math.floor((customHP / customMax) * 100), 0, 100)
-    end
-    if humanoid and humanoid.MaxHealth > 0 then
-        return math.clamp(math.floor((humanoid.Health / humanoid.MaxHealth) * 100), 0, 100)
-    end
-    return 100
-end
-
--- 3. UTILITY: POLA PELACAKAN LIVE SINKRONISASI (JARAK STUDS & PERSEN HP)
-local function trackZombie(model)
-    if trackedNPCs[model] then return end
-    trackedNPCs[model] = true
-    
-    local elementId = tostring(math.random(100000, 999999))
-    local initialHP = getLiveHealthPercent(model)
-    
-    uiLabels[elementId] = MainTab:CreateLabel(
-        string.format("🧟 %s  |  ❤️ HP: %d%%  |  📍 Jarak: Menyinkronkan...", model.Name, initialHP)
-    )
-    
-    task.spawn(function()
-        while model and model:IsDescendantOf(workspace) and trackedNPCs[model] do
-            if isDead(model) then break end
-            
-            -- Ambil ulang posisi tubuh setiap kali berputar agar jarak studs tidak stuck/macet
-            local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso")
-            local myChar = LocalPlayer.Character
-            local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-            
-            if myHrp and hrp then
-                local distance = math.floor((myHrp.Position - hrp.Position).Magnitude)
-                local liveHP = getLiveHealthPercent(model)
-                
-                if liveHP <= 0 then break end
-                
-                if uiLabels[elementId] and uiLabels[elementId].Update then
-                    uiLabels[elementId]:Update(
-                        string.format("🧟 %s  |  ❤️ HP: %d%%  |  📍 Jarak: %d studs", model.Name, liveHP, distance)
-                    )
-                end
-            end
-            task.wait(0.15)
-        end
-        
-        -- MEMBERSIHKAN SECARA INSTAN KETIKA MENJADI MAYAT / DESPAWN
-        if uiLabels[elementId] then
-            pcall(function()
-                uiLabels[elementId]:Destroy()
-            end)
-            uiLabels[elementId] = nil
-        end
-        trackedNPCs[model] = nil
-    end)
-end
-
--- 4. SMART RADAR DETECTOR ENGINE (SISTEM FILTRASI ANATOMI FISIK)
-local function validateEntity(object)
-    if not object:IsA("Model") then return end
-    
-    -- Jeda mikro agar Solara selesai menerima sinkronisasi data dari server Roblox
-    task.wait(0.1)
-    
-    local humanoid = object:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        -- FILTRASI PINTAR MURNI:
-        if object == LocalPlayer.Character then return end -- Singkirkan karaktermu sendiri
-        if Players:GetPlayerFromCharacter(object) then return end -- Singkirkan player asli lain di server
-        
-        -- Jika lolos seleksi di atas, artinya entitas ini adalah valid NPC/Musuh/Zombie yang aktif!
-        if not isDead(object) then
-            trackZombie(object)
-        end
-    end
-end
-
--- 5. INITIALIZATION RUN
-for _, desc in ipairs(workspace:GetDescendants()) do
-    validateEntity(desc)
-end
-workspace.DescendantAdded:Connect(validateEntity)
-
-Rayfield:Notify({
-   Title = "Smart Radar Suite",
-   Content = "Metode deteksi pintar non-keyword berhasil aktif!",
-   Duration = 3
-})
